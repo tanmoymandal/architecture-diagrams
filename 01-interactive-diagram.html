@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkout architecture: Prompt 1</title>
+<style>
+:root{color-scheme:light dark;--bg:#fbfbfa;--fg:#1b1d21;--mut:#5f6670;--card:#f0f1ef;--line:#8b929b;--hi:#d9480f;--bad:#d6336c;--badbg:#ffe3ec;--new:#0ca678;
+--client:#e3edff;--clientS:#3b6fd4;--svc:#dff4ec;--svcS:#1a8f6f;--data:#fff0cf;--dataS:#b97d00;--q:#ede4fa;--qS:#7448c2;--ext:#e9e9e7;--extS:#6e7378}
+@media (prefers-color-scheme:dark){:root{--bg:#15171b;--fg:#eceef1;--mut:#a0a7b0;--card:#23262c;--line:#7a828c;--hi:#ff8c42;--bad:#ff6b9a;--badbg:#4a1f31;--new:#38d9a9;
+--client:#1f2e4d;--clientS:#6f9cf5;--svc:#17382f;--svcS:#3fcf9f;--data:#40320f;--dataS:#e3a92f;--q:#2e2347;--qS:#a07af0;--ext:#2b2e33;--extS:#98a0a8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px 14px 28px}
+h1{font:600 22px/1.25 "Iowan Old Style","Palatino Linotype",Georgia,serif;margin:2px 0 4px}
+.tag{font-size:12px;color:var(--mut)}#sub{margin:0 0 12px;color:var(--mut)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+button,select{font:inherit;font-size:14px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+select{padding:6px 8px}
+button:focus-visible,select:focus-visible,.n:focus-visible{outline:2px solid var(--hi);outline-offset:2px}
+button.pri,button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.seg{display:inline-flex}.seg button:first-child{border-radius:8px 0 0 8px}.seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.ct{font-size:14px;color:var(--mut)}
+.pips{display:inline-flex;gap:4px;flex-wrap:wrap}.pips button{width:26px;height:26px;padding:0;font-size:12px;border-radius:50%;transition:background .25s,border-color .25s}
+.pips button.d{background:var(--hi);color:#fff;border-color:var(--hi)}.pips button.c{outline:2px solid var(--fg);outline-offset:1px}
+.ban{background:color-mix(in srgb,var(--new) 15%,var(--bg));border:1px solid var(--new);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:14px}
+.stage{position:relative}
+svg{width:100%;height:auto;display:block;background:var(--card);border-radius:12px;transition:opacity .18s}
+.tip{position:absolute;pointer-events:none;z-index:5;background:var(--fg);color:var(--bg);padding:7px 10px;border-radius:8px;font-size:13px;line-height:1.35;max-width:230px;opacity:0;transition:opacity .15s;transform:translate(-50%,-100%)}
+.tip.below{transform:translate(-50%,0)}.tip small{display:block;opacity:.7;margin-top:2px}
+.e{fill:none;stroke:var(--line);stroke-width:1.5;transition:stroke .4s,stroke-width .4s,opacity .4s}
+.e.as{stroke:var(--qS);stroke-dasharray:5 4}
+.e.rel{stroke:var(--fg);stroke-width:2.5}
+.e.lit{stroke:var(--hi);stroke-width:3;stroke-dasharray:none}.e.cur{stroke-width:4}.e.dim{opacity:.18}
+.e.ef{stroke:var(--bad);stroke-dasharray:4 3;stroke-width:2.5}.e.nwe{stroke:var(--new);stroke-width:2.5}
+.el{font-size:9.5px;fill:var(--mut);text-anchor:middle;stroke:var(--card);stroke-width:3;paint-order:stroke}
+.n{cursor:pointer;transition:opacity .4s}
+.n rect{fill:var(--c);stroke:var(--cs);stroke-width:1.5;transition:fill .35s,stroke .35s,stroke-width .35s,filter .45s}
+.n:hover rect{stroke-width:2.5}
+.client{--c:var(--client);--cs:var(--clientS)}.svc{--c:var(--svc);--cs:var(--svcS)}.data{--c:var(--data);--cs:var(--dataS)}.q{--c:var(--q);--cs:var(--qS)}.ext{--c:var(--ext);--cs:var(--extS)}
+.n.dim{opacity:.25}.n.mute{opacity:.5}.n.sel rect{stroke-width:3.5}
+.n.bad rect{fill:var(--badbg);stroke:var(--bad);stroke-width:3.5}.n.aff{opacity:.4}.n.aff rect{stroke-dasharray:4 3}
+.n.nw rect{stroke:var(--new);stroke-width:3;filter:drop-shadow(0 0 6px var(--new))}
+.n.glow{--gc:var(--hi)}.n.glow.gbad{--gc:var(--bad)}
+.n.glow rect{stroke:var(--gc);stroke-width:4.5;filter:drop-shadow(0 0 10px var(--gc))}
+.nl{font-weight:600;fill:var(--fg);text-anchor:middle;pointer-events:none}.ns{fill:var(--mut);text-anchor:middle;pointer-events:none}
+.bg rect{fill:var(--new);stroke:none;filter:none}.bg text{fill:#fff;font-size:9px;font-weight:700;text-anchor:middle}
+.pk{stroke:var(--bg);stroke-width:2;pointer-events:none}.pk.step{fill:var(--hi)}.pk.flow{fill:var(--fg)}.pk.flow.as{fill:var(--qS)}.pk.fail{fill:var(--bad)}
+.card{background:var(--card);border-radius:10px;padding:10px 14px;margin-top:10px}
+.card p{margin:4px 0}.card.bad{border-left:4px solid var(--bad)}.card.st{border-left:4px solid var(--hi)}
+.hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pill{font-size:12px;color:var(--mut)}
+.dot{display:inline-block;width:12px;height:12px;border-radius:4px;border:2px solid var(--cs);background:var(--c)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}
+.facts div{background:var(--bg);border-radius:8px;padding:6px 10px;font-size:14px}.facts small,.chips small{display:block;color:var(--mut);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}.chips small{min-width:64px}
+.chip{padding:2px 10px;border-radius:999px;font-size:13px}.none{font-size:13px;color:var(--mut)}
+.risk{font-size:14px;color:var(--mut)}.role{font-size:14px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--mut);margin-top:12px}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;border:1.5px solid var(--cs);background:var(--c)}
+</style></head><body><main>
+<header><div class="tag">Prompt 1 of 5</div><h1 id="ttl"></h1><p id="sub"></p></header>
+<div class="bar" id="bar"></div><div id="ban"></div>
+<div class="stage" id="stage"><svg id="svg" role="img" aria-label="Checkout system architecture"></svg><div class="tip" id="tip"></div></div>
+<section id="panel" aria-live="polite"></section>
+<div class="lg"><span><i class="client"></i>Client</span><span><i class="svc"></i>Service</span><span><i class="data"></i>Data store</span><span><i class="q"></i>Queue</span><span><i class="ext"></i>External</span><span>Dashed purple = async</span></div>
+</main>
+<script>
+const L=1;
+const TT={1:['Our checkout architecture, made clickable','Hover or tap any component for details. Press Animate flow to watch data move through the system.'],
+2:['Trace a checkout request','Play the trace, or step through it one hop at a time. Each hop lights up the components involved.'],
+3:['Simulate a failure','Tap a component in failure mode to watch the failure spread, then step through it.'],
+4:['One system, two audiences','Switch between the executive summary and the full engineering detail.'],
+5:['A living diagram','Notifications was added to the system. The diagram now shows exactly what changed.']};
+const N={
+browser:{x:10,y:210,l:'React App',s:'Storefront UI',t:'client',d:'The customer-facing storefront and checkout screens.',r:'Starts the flow: collects the cart and card details, then sends the order.',o:'Web team',p:'HTTPS :443',sla:'Page load under 2.5 s',f:'Shoppers can’t reach checkout at all.'},
+cdn:{x:140,y:210,l:'CloudFront',s:'CDN',t:'ext',d:'Serves static assets and forwards API calls to the gateway.',r:'Receives the order request and passes it to the gateway.',o:'Platform team',p:'HTTPS :443 · edge cache',sla:'99.99% availability',f:'Pages fail to load and shoppers see a blank screen.'},
+gw:{x:270,y:210,l:'API Gateway',s:'Routing and auth',t:'svc',d:'Authenticates requests and routes them to Orders, Inventory and Payments.',r:'Checks the shopper’s session, then routes the order to Orders and the charge to Payments.',o:'Platform team',p:'REST :8080 · JWT auth',sla:'99.95% · p99 50 ms',f:'Every backend call fails. Shoppers see a generic error page.'},
+orders:{x:430,y:40,l:'Orders',s:'Order lifecycle',t:'svc',d:'Creates and tracks orders, and publishes an OrderCreated event.',r:'Saves the order and announces it to the rest of the system.',o:'Commerce team',p:'REST :8081',sla:'99.9% · p99 200 ms',f:'Orders can’t be created. Shoppers see “Something went wrong” on Place order.'},
+kafka:{x:430,y:125,l:'Kafka',s:'Event bus',t:'q',chg:1,d:'Carries order events between services without blocking checkout.',r:'Hands the OrderCreated event to every service that needs it, without making the shopper wait.',o:'Data platform',p:'TCP :9092 · orders.created',sla:'99.9% · lag under 5 s',f:'Events queue up. Orders still save, but stock updates and emails run late.'},
+inventory:{x:430,y:210,l:'Inventory',s:'Stock levels',t:'svc',d:'Reserves stock when an order is created and keeps availability current.',r:'Reserves the purchased items and refreshes stock counts.',o:'Fulfilment team',p:'REST :8082 · consumes orders.created',sla:'99.9% · p99 150 ms',f:'Stock isn’t reserved. Items can oversell and product pages show stale availability.'},
+payments:{x:430,y:330,l:'Payments',s:'Charges and refunds',t:'svc',d:'Charges cards through Stripe and records payment status.',r:'Charges the card and reports success or failure back to the gateway.',o:'Payments team',p:'REST :8083 · PCI scope',sla:'99.95% · p99 800 ms',f:'Card charges fail. Shoppers see “Payment failed, please try again” and orders stay pending.'},
+postgres:{x:580,y:40,l:'Postgres',s:'Orders database',t:'data',d:'Source of truth for every order.',r:'Stores the order permanently.',o:'Commerce team',p:'SQL :5432',sla:'99.99% · 5 min data loss limit',f:'Orders can’t be saved, so checkout is down.'},
+redis:{x:580,y:210,l:'Redis',s:'Stock cache',t:'data',d:'Caches stock counts so product pages load fast.',r:'Holds fresh stock counts for fast product pages.',o:'Fulfilment team',p:'RESP :6379 · TTL 60 s',sla:'99.9% · 95% cache hits',f:'Reads fall back to the database. Pages slow down but keep working.'},
+stripe:{x:580,y:330,l:'Stripe',s:'Payment provider',t:'ext',d:'Third-party processor that handles card payments.',r:'Authorises and captures the card payment.',o:'Payments team',p:'HTTPS API',sla:'Vendor SLA 99.99%',f:'No card can be charged. Shoppers see “Payment failed”.'},
+notif:{x:430,y:430,l:'Notifications',s:'Emails and alerts',t:'svc',nw:1,d:'Sends the order confirmation email when it sees an OrderCreated event.',r:'Sends the confirmation email once an order exists.',o:'Growth team',p:'Consumes orders.created',sla:'99.5% · email under 60 s',f:'Confirmation emails are delayed. Checkout is unaffected.'},
+sendgrid:{x:580,y:430,l:'SendGrid',s:'Email provider',t:'ext',nw:1,d:'Third-party service that delivers the emails.',r:'Delivers the confirmation email.',o:'Growth team',p:'HTTPS API',sla:'Vendor SLA 99.95%',f:'Emails aren’t delivered. Checkout is unaffected.'}};
+const E=[{a:'browser',b:'cdn',lab:'HTTPS'},{a:'cdn',b:'gw',lab:'HTTPS'},{a:'gw',b:'orders',lab:'REST'},{a:'gw',b:'inventory',lab:'REST'},{a:'gw',b:'payments',lab:'REST'},
+{a:'orders',b:'postgres',lab:'SQL'},{a:'orders',b:'kafka',lab:'publish',as:1},{a:'kafka',b:'inventory',lab:'consume',as:1},{a:'inventory',b:'redis',lab:'RESP'},{a:'payments',b:'stripe',lab:'HTTPS'},
+{a:'kafka',b:'notif',as:1,nw:1,p:'M430 149 H405 V454 H430'},{a:'notif',b:'sendgrid',lab:'HTTPS',nw:1}];
+const X={customer:{x:20,y:200,w:180,h:90,l:'Customer app',s:'What shoppers see',t:'client',d:'The website shoppers use to browse and check out.',r:'Where the shopper places the order.',o:'Web team'},
+platform:{x:260,y:200,w:180,h:90,l:'Checkout platform',s:'Orders, stock, payments',t:'svc',chg:1,d:'Takes the order, charges the card and updates stock.'+(L>=5?' It now also sends confirmation emails.':''),r:'Does the real work behind the Place order button.',o:'Commerce, Payments and Fulfilment teams'},
+partners:{x:500,y:200,w:180,h:90,l:'Data and partners',s:'Storage and Stripe',t:'data',d:'Where order data is kept, and the partner that processes card payments.',r:'Stores the order and takes the payment.',o:'Data platform and Payments teams'}};
+const XE=[{a:'customer',b:'platform'},{a:'platform',b:'partners'}];
+const S=[['browser>cdn','The shopper taps “Place order” in the React app.'],['cdn>gw','CloudFront forwards the request to the API gateway.'],['gw>orders','The gateway routes it to the Orders service.'],['orders>postgres','Orders saves the order in Postgres.'],['gw>payments','The gateway calls Payments.'],['payments>stripe','Payments charges the card through Stripe.'],['orders>kafka','Orders publishes an OrderCreated event to Kafka.'],['kafka>inventory','Inventory consumes the event.'],['inventory>redis','Inventory updates the Redis stock cache and the shopper sees the confirmation.']];
+
+const $=i=>document.getElementById(i),svg=$('svg'),NS='http://www.w3.org/2000/svg';
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DUR=700,HOLD=650;
+let view='eng',sel=null,step=0,failMode=false,fail=null,fs=0,MD=0,DEP={},flow=false,playing=false,spd=1,nextAt=0,raf=null,PK=[],FP=[],NE={},EE={};
+const isEx=()=>L>=4&&view=='exec';
+const nodes=()=>isEx()?X:Object.fromEntries(Object.entries(N).filter(([k,v])=>L>=5||!v.nw));
+const edges=()=>(isEx()?XE:E).filter(e=>L>=5||!e.nw);
+const eid=e=>e.a+'>'+e.b;
+const mk=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const stepOf=id=>S.findIndex(s=>s[0].split('>').includes(id))+1;
+
+function geo(a,b,e){if(e.p)return[e.p];const aw=a.w||110,ah=a.h||48,bw=b.w||110,bh=b.h||48;
+if(a.x==b.x){const dn=b.y>a.y,x1=a.x+aw/2,y1=a.y+(dn?ah:0),y2=b.y+(dn?0:bh);return['M'+x1+' '+y1+' V'+y2,x1+26,(y1+y2)/2+3]}
+const x1=a.x+aw,y1=a.y+ah/2,x2=b.x,y2=b.y+bh/2;return['M'+x1+' '+y1+' L'+x2+' '+y2,(x1+x2)/2,(y1+y2)/2-6]}
+function dm(f,eds){const d={};d[f]=0;const q=[f];while(q.length){const c=q.shift();eds.forEach(e=>{if(e.a==c&&d[e.b]===undefined){d[e.b]=d[c]+1;q.push(e.b)}})}return d}
+
+/* ---------- draw once ---------- */
+function build(){
+const nd=nodes(),eds=edges(),ex=isEx();PK=[];FP=[];NE={};EE={};
+svg.innerHTML='<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L9 5L0 9z" fill="context-stroke"/></marker></defs>';
+const eg=mk('g',{},svg),lg=mk('g',{},svg),ng=mk('g',{},svg);mk('g',{id:'pg'},svg);
+eds.forEach(e=>{const g=geo(nd[e.a],nd[e.b],e);
+EE[eid(e)]={e,el:mk('path',{class:'e'+(e.as?' as':'')+(e.nw&&L>=5?' nwe':''),d:g[0],'marker-end':'url(#ar)'},eg)};
+if(L>=4&&!ex&&e.lab){mk('text',{class:'el',x:g[1],y:g[2]},lg).textContent=e.lab}});
+Object.entries(nd).forEach(([id,n])=>{const w=n.w||110,h=n.h||48,big=!!n.w;
+const g=mk('g',{class:'n '+n.t+(L>=5&&n.nw?' nw':''),'data-n':id,tabindex:0,role:'button','aria-label':n.l},ng);
+mk('rect',{x:n.x,y:n.y,width:w,height:h,rx:9},g);
+mk('text',{class:'nl',x:n.x+w/2,y:n.y+(big?38:20),style:'font-size:'+(big?15:12)+'px'},g).textContent=n.l;
+mk('text',{class:'ns',x:n.x+w/2,y:n.y+(big?60:36),style:'font-size:'+(big?12:10)+'px'},g).textContent=n.s;
+if(L>=5&&(n.nw||n.chg)){const bw=n.nw?36:60,b=mk('g',{class:'bg'},g);mk('rect',{x:n.x+w-bw+6,y:n.y-9,width:bw,height:16,rx:8},b);mk('text',{x:n.x+w-bw/2+6,y:n.y+2.5},b).textContent=n.nw?'NEW':'CHANGED'}
+NE[id]=g});
+svg.setAttribute('viewBox','0 0 700 '+(L>=5?500:400))}
+
+/* ---------- state to classes (no redraw) ---------- */
+function update(){
+const ex=isEx(),eds=edges(),nd=nodes();
+DEP=(fail&&!ex)?dm(fail,eds):{};MD=Math.max(0,...Object.values(DEP));if(fail&&fs>MD)fs=MD;
+const lit=new Set(),litN=new Set(),cur=step?S[step-1][0]:null;
+for(let i=0;i<step;i++){lit.add(S[i][0]);S[i][0].split('>').forEach(x=>litN.add(x))}
+const aff=new Set(Object.keys(DEP).filter(k=>DEP[k]>=1&&DEP[k]<=fs)),hl=sel&&!step&&!fail&&nd[sel];
+eds.forEach(e=>{const id=eid(e),c=EE[id].el.classList;
+c.toggle('lit',lit.has(id));c.toggle('cur',id==cur);c.toggle('dim',!!step&&!lit.has(id));
+c.toggle('ef',!!fail&&DEP[e.a]!==undefined&&DEP[e.a]<fs);c.toggle('rel',!!hl&&(e.a==sel||e.b==sel))});
+Object.keys(NE).forEach(id=>{const c=NE[id].classList;
+c.toggle('dim',!!step&&!litN.has(id));c.toggle('sel',id==sel);c.toggle('bad',fail==id);c.toggle('aff',aff.has(id));
+c.toggle('mute',!!hl&&id!=sel&&!eds.some(e=>(e.a==sel&&e.b==id)||(e.b==sel&&e.a==id)))});
+syncFlow();bar();panel();kick()}
+
+/* ---------- motion ---------- */
+function glow(id,kind){const g=NE[id];if(!g)return;g.classList.toggle('gbad',kind=='bad');g.classList.add('glow');clearTimeout(g._t);g._t=setTimeout(()=>g.classList.remove('glow'),850)}
+function send(id,kind,dur,done){const o=EE[id];if(!o||RM){done&&done();return}
+const c=mk('circle',{class:'pk '+kind+(o.e.as?' as':''),r:6,cx:-20,cy:-20},svg.querySelector('#pg'));
+PK.push({c,p:o.el,len:o.el.getTotalLength(),t0:performance.now(),dur,done});kick()}
+function syncFlow(){const want=flow&&!step&&!fail;
+if(!want){FP.forEach(f=>f.c.remove());FP=[];return}
+if(FP.length)return;const pg=svg.querySelector('#pg');
+Object.values(EE).forEach((o,j)=>{const c=mk('circle',{class:'pk flow'+(o.e.as?' as':''),r:5,cx:-20,cy:-20},pg);const f={c,p:o.el,len:o.el.getTotalLength(),j};FP.push(f);
+if(RM){const pt=f.p.getPointAtLength(f.len*.5);c.setAttribute('cx',pt.x);c.setAttribute('cy',pt.y)}})}
+function frame(ts){raf=null;
+PK=PK.filter(q=>{const k=Math.min(1,(ts-q.t0)/q.dur),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2,pt=q.p.getPointAtLength(q.len*e);
+q.c.setAttribute('cx',pt.x);q.c.setAttribute('cy',pt.y);q.c.style.opacity=Math.min(1,k*8,(1-k)*8+.15);
+if(k>=1){q.c.remove();q.done&&q.done();return false}return true});
+if(!RM)FP.forEach(f=>{const ph=(ts/(2600/spd)+f.j*.17)%1,pt=f.p.getPointAtLength(f.len*ph);f.c.setAttribute('cx',pt.x);f.c.setAttribute('cy',pt.y);f.c.style.opacity=Math.min(1,ph*8,(1-ph)*8)});
+if(playing&&ts>=nextAt){if(!mode()||cur()>=mx()){playing=false;update()}else{go(cur()+1,true);nextAt=ts+(DUR+HOLD)/spd}}
+kick()}
+function kick(){if(raf)return;if(PK.length||(FP.length&&!RM)||playing)raf=requestAnimationFrame(frame)}
+
+/* ---------- timelines: trace and failure cascade ---------- */
+const mode=()=>step?'t':(failMode&&fail&&MD>0?'c':null);
+const cur=()=>mode()=='t'?step:fs,mn=()=>mode()=='t'?1:0,mx=()=>mode()=='t'?S.length:MD;
+function go(i,fwd){mode()=='t'?goStep(i,fwd):goCas(i,fwd)}
+function goStep(i,fwd){step=i;update();const id=S[i-1][0],[a,b]=id.split('>');glow(a);if(fwd)send(id,'step',DUR/spd,()=>glow(b));else glow(b)}
+function goCas(k,fwd){fs=k;update();if(k==0){glow(fail,'bad');return}
+const es=edges().filter(e=>DEP[e.a]===k-1);
+if(fwd)es.forEach(e=>{glow(e.a,'bad');send(eid(e),'fail',DUR/spd,()=>glow(e.b,'bad'))});else Object.keys(DEP).filter(n=>DEP[n]==k).forEach(n=>glow(n,'bad'))}
+function startCascade(id){step=0;failMode=true;fail=id;sel=id;fs=0;playing=false;update();glow(id,'bad');if(MD>0){playing=true;nextAt=performance.now()+600/spd;update()}}
+
+const A={
+go(){step=1;failMode=false;fail=null;playing=true;goStep(1,true);nextAt=performance.now()+(DUR+HOLD)/spd},
+tr(){step=1;failMode=false;fail=null;playing=false;goStep(1,true)},
+off(){step=0;playing=false;update()},
+fm(){failMode=!failMode;playing=false;if(failMode)step=0;else fail=null;update()},
+pl(){if(!mode())return;if(playing){playing=false;update();return}let re=false;if(cur()>=mx()){go(mn(),true);re=true}playing=true;nextAt=performance.now()+(re?(DUR+HOLD)/spd:250);update()},
+nx(){if(!mode()||cur()>=mx())return;go(cur()+1,true)},pv(){if(!mode()||cur()<=mn())return;go(cur()-1,false)},
+pip(i){if(!mode())return;i=+i;go(i,i>cur())},fl(){flow=!flow;update()},sp(v){spd=+v;update()},
+sel(id){sel=id;glow(id);update()},show(id){failMode=false;fail=null;playing=false;goStep(stepOf(id),true)},sim(id){startCascade(id)},
+v(x){if(x==view)return;playing=false;step=0;failMode=false;fail=null;sel=null;svg.style.opacity=0;setTimeout(()=>{view=x;build();update();svg.style.opacity=1},180)}};
+
+/* ---------- toolbar and detail panel ---------- */
+function ctl(lab){let h='<span class="ct">'+lab+'</span><button id="bk" onclick="A.pv()">Back</button><button id="pp" class="pri" onclick="A.pl()">'+(playing?'Pause':'▶ Play')+'</button><button id="nx" onclick="A.nx()">Next</button><span class="pips">';
+for(let i=mn();i<=mx();i++)h+='<button id="pip'+i+'" class="'+(i<=cur()?'d ':'')+(i==cur()?'c':'')+'" onclick="A.pip('+i+')" aria-label="Go to '+lab.toLowerCase()+' '+i+'">'+i+'</button>';
+return h+'</span>'+(step?'<button id="clr" onclick="A.off()">Clear</button>':'')}
+function bar(){const af=document.activeElement&&document.activeElement.id,ex=isEx();let b='';
+if(!ex){if(L>=2)b+=step?ctl('Trace'):'<button id="go" class="pri" onclick="A.go()">▶ Play trace</button><button id="tr" onclick="A.tr()">Step through</button>';
+if(L>=3){b+='<button id="fm" class="'+(failMode?'on':'')+'" onclick="A.fm()">Failure mode</button>';if(!step&&mode()=='c')b+=ctl('Cascade')}}
+if(L>=4)b+='<span class="seg"><button id="vE" class="'+(!ex?'on':'')+'" onclick="A.v(\'eng\')">Engineering</button><button id="vX" class="'+(ex?'on':'')+'" onclick="A.v(\'exec\')">Executive</button></span>';
+b+='<button id="fl" class="'+(flow?'on':'')+'" onclick="A.fl()">Animate flow</button><select id="spd" aria-label="Animation speed" onchange="A.sp(this.value)">'+[.5,1,2].map(v=>'<option value="'+v+'"'+(v==spd?' selected':'')+'>'+v+'×</option>').join('')+'</select>';
+$('bar').innerHTML=b;if(af){const el=$(af);if(el)el.focus({preventScroll:true})}
+$('ban').innerHTML=L>=5?'<div class="ban"><b>What changed:</b> 1 new service (Notifications), 1 new integration (SendGrid), 2 new connections. The checkout flow itself is unchanged.</div>':'';
+$('ttl').textContent=TT[L][0];$('sub').textContent=TT[L][1]}
+function card(id){const nd=nodes(),n=nd[id],ex=isEx(),eds=edges();
+const dp=eds.filter(e=>e.a==id).map(e=>e.b),by=eds.filter(e=>e.b==id).map(e=>e.a);
+const chips=a=>a.length?a.map(k=>'<button class="chip" id="chip-'+k+'" onclick="A.sel(\''+k+'\')">'+nd[k].l+'</button>').join(''):'<span class="none">Nothing</span>';
+let h='<div class="card"><div class="hd"><span class="dot '+n.t+'"></span><b>'+n.l+'</b><span class="pill">'+n.s+'</span></div><p>'+n.d+'</p><p class="role"><b>In checkout:</b> '+n.r+'</p>'+
+'<div class="facts"><div><small>Owner</small>'+n.o+'</div>'+(ex?'':'<div><small>Interface</small>'+n.p+'</div><div><small>Target</small>'+n.sla+'</div>')+'</div>'+
+'<div class="chips"><small>Calls</small>'+chips(dp)+'</div><div class="chips"><small>Called by</small>'+chips(by)+'</div>'+(ex?'':'<p class="risk"><b>If it goes down:</b> '+n.f+'</p>');
+let a='';if(!ex&&L>=2&&stepOf(id))a+='<button id="a-show" onclick="A.show(\''+id+'\')">Show in trace</button>';
+if(!ex&&L>=3)a+='<button id="a-sim" onclick="A.sim(\''+id+'\')">Simulate failure</button>';
+return h+(a?'<div class="acts">'+a+'</div>':'')+'</div>'}
+function panel(){const af=document.activeElement&&document.activeElement.id,ex=isEx(),nd=nodes();let p='';
+if(step)p+='<div class="card st"><b>Step '+step+' of '+S.length+'</b><p>'+S[step-1][1]+'</p></div>';
+if(failMode&&!ex){if(fail){const n=nd[fail],aff=Object.keys(DEP).filter(k=>DEP[k]>=1&&DEP[k]<=fs);
+p+='<div class="card bad"><b>'+n.l+' is down</b><p><b>Shoppers see:</b> '+n.f+'</p><p><b>Also cut off:</b> '+(aff.map(k=>nd[k].l).join(', ')||(MD>0?'nothing yet. Press Next to see it spread.':'nothing downstream'))+'</p></div>'}
+else p+='<div class="card">Tap a component to simulate it going down.</div>'}
+if(sel&&nd[sel])p+=card(sel);else if(!step&&!failMode)p+='<div class="card">Tap any component to see its details.</div>';
+$('panel').innerHTML=p;if(af&&af!='a-sim'){const el=$(af);if(el&&el.id.indexOf('chip')==0)el.focus({preventScroll:true})}}
+
+/* ---------- events ---------- */
+svg.addEventListener('click',e=>{const g=e.target.closest('[data-n]');if(!g)return;const id=g.dataset.n;
+if(failMode&&!isEx()){if(fail==id){fail=null;playing=false;sel=id;update()}else startCascade(id)}else{sel=id;glow(id);update()}});
+svg.addEventListener('keydown',e=>{if(e.key=='Enter'||e.key==' '){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
+const tip=$('tip');
+svg.addEventListener('pointerover',e=>{const g=e.pointerType=='mouse'&&e.target.closest('[data-n]');
+if(!g){tip.style.opacity=0;return}const n=nodes()[g.dataset.n],r=g.getBoundingClientRect(),w=$('stage').getBoundingClientRect(),below=r.top-w.top<80;
+tip.innerHTML='<b>'+n.l+'</b> · '+n.s+'<small>'+n.d+'</small><small>Click for details</small>';tip.classList.toggle('below',below);
+tip.style.left=(r.left-w.left+r.width/2)+'px';tip.style.top=(below?r.bottom-w.top+8:r.top-w.top-8)+'px';tip.style.opacity=1});
+svg.addEventListener('pointerleave',()=>{tip.style.opacity=0});
+document.addEventListener('keydown',e=>{if(e.target.tagName=='SELECT')return;if(e.key=='ArrowRight')A.nx();if(e.key=='ArrowLeft')A.pv()});
+
+/* ---------- start ---------- */
+if(L==2)step=4;if(L==3){failMode=true;fail='payments';sel='payments';fs=1e9}if(L==5)sel='notif';
+build();update();
+</script></body></html>
